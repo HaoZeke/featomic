@@ -1,15 +1,17 @@
-from typing import List, Optional, Sequence, overload
+from typing import TYPE_CHECKING, List, Optional, Sequence, overload
 
-import numpy as np
 import torch
-from metatomic.torch import System
 
-import featomic
+from metatomic.torch import System, systems_to_torch as _metatomic_systems_to_torch
+
+if TYPE_CHECKING:
+    from featomic.systems import IntoSystem
+
 
 
 @overload
 def systems_to_torch(
-    systems: "featomic.systems.IntoSystem",
+    systems: "IntoSystem",
     positions_requires_grad: Optional[bool] = None,
     cell_requires_grad: Optional[bool] = None,
     dtype: Optional[torch.dtype] = None,
@@ -20,7 +22,7 @@ def systems_to_torch(
 
 @overload
 def systems_to_torch(
-    systems: Sequence["featomic.systems.IntoSystem"],
+    systems: Sequence["IntoSystem"],
     positions_requires_grad: Optional[bool] = None,
     cell_requires_grad: Optional[bool] = None,
     dtype: Optional[torch.dtype] = None,
@@ -41,9 +43,8 @@ def systems_to_torch(
     data in :py:class:`torch.Tensor` and making the overall object compatible with
     TorchScript.
 
-    This function uses :py:func:`featomic.systems.wrap_system` to support a wide range
-    of input types (ASE, chemfiles, pyscf, etc.), then delegates to
-    :py:func:`metatomic.torch.systems_to_torch` for the actual conversion.
+    This is a wrapper around :py:func:`metatomic.torch.systems_to_torch` that provides
+    type hints specific to featomic's :py:class:`featomic.systems.IntoSystem`.
 
     :param systems: any system supported by featomic. If this is an iterable of system,
         this function converts them all and returns a list of converted systems.
@@ -78,46 +79,24 @@ def systems_to_torch(
         ]
 
 
-def _system_to_torch(
-    system, positions_requires_grad, cell_requires_grad, dtype, device
-):
-    if not _is_torch_system(system):
-        # Use featomic's wrap_system to support various input types (chemfiles, pyscf, etc.)
-        wrapped = featomic.systems.wrap_system(system)
-
-        # Create System directly from wrapped data
-        # This avoids the ASE round-trip while still using metatomic's System class
-        # Preserve input dtype if not explicitly specified
-        positions_data = wrapped.positions()
-        cell_data = wrapped.cell()
-        
-        # Convert numpy dtypes to torch dtypes if needed
-        if dtype is None:
-            positions_dtype = torch.from_numpy(positions_data).dtype
-            cell_dtype = torch.from_numpy(cell_data).dtype
-        else:
-            positions_dtype = dtype
-            cell_dtype = dtype
-        
-        system = System(
-            types=torch.tensor(wrapped.types(), dtype=torch.int32, device=device),
-            positions=torch.tensor(positions_data, dtype=positions_dtype, device=device),
-            cell=torch.tensor(cell_data, dtype=cell_dtype, device=device),
-            pbc=(
-                torch.tensor([False, False, False], device=device)
-                if np.all(cell_data == 0.0)
-                else torch.tensor([True, True, True], device=device)
-            ),
+def _system_to_torch(system, positions_requires_grad, cell_requires_grad, dtype, device):
+    if _is_torch_system(system):
+        # Already a torch System, just apply requires_grad if requested
+        result = system
+        if positions_requires_grad is not None:
+            result.positions.requires_grad_(positions_requires_grad)
+        if cell_requires_grad is not None:
+            result.cell.requires_grad_(cell_requires_grad)
+        return result
+    else:
+        # Delegate to metatomic for all other types
+        return _metatomic_systems_to_torch(
+            system,
+            dtype=dtype,
+            device=device,
+            positions_requires_grad=positions_requires_grad,
+            cell_requires_grad=cell_requires_grad,
         )
-
-    # Apply requires_grad if requested
-    if positions_requires_grad is not None:
-        system.positions.requires_grad_(positions_requires_grad)
-
-    if cell_requires_grad is not None:
-        system.cell.requires_grad_(cell_requires_grad)
-
-    return system
 
 
 def _is_torch_system(system):
