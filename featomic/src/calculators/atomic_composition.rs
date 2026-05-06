@@ -51,7 +51,7 @@ impl CalculatorBase for AtomicComposition {
     fn samples(&self, keys: &Labels, systems: &mut [Box<dyn System>]) -> Result<Vec<Labels>, Error> {
         assert_eq!(keys.names(), ["center_type"]);
         let mut samples = Vec::new();
-        for [center_type_key] in keys.iter_fixed_size() {
+        for [center_type_key] in keys.to_cpu().iter_fixed_size() {
             let mut builder = LabelsBuilder::new(self.sample_names());
 
             for (system_i, system) in systems.iter_mut().enumerate() {
@@ -119,9 +119,9 @@ impl CalculatorBase for AtomicComposition {
             let center_type = key[0];
 
             let block = block.data_mut();
-            let array = block.values.to_ndarray_mut();
+            let array = block.values.get_ndarray_mut();
 
-            for (property_i, &[count]) in block.properties.iter_fixed_size().enumerate() {
+            for (property_i, &[count]) in block.properties.to_cpu().iter_fixed_size().enumerate() {
                 if count == 0 {
                     for (sample_i, samples) in block.samples.iter().enumerate() {
                         let mut value = 0.0;

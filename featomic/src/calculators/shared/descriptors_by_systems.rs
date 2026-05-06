@@ -144,7 +144,7 @@ pub fn split_tensor_map_by_system(descriptor: &mut TensorMap, n_systems: usize) 
                 let mut system_per_sample = vec![-1_i32; block_data.samples.count()];
 
                 let system_start = *system_end;
-                for (sample_i, &[system, atom]) in block_data.samples.iter_fixed_size().enumerate().skip(system_start) {
+                for (sample_i, &[system, atom]) in block_data.samples.to_cpu().iter_fixed_size().enumerate().skip(system_start) {
                     system_per_sample[sample_i] = system;
 
                     if system as usize == system_i {
@@ -182,7 +182,7 @@ pub fn split_tensor_map_by_system(descriptor: &mut TensorMap, n_systems: usize) 
                     //
                     // `per_sample_size * system_start` skips all the data
                     // associated with the previous systems.
-                    block_data.values.as_ndarray_mut().as_mut_ptr().add(per_sample_size * system_start)
+                    block_data.values.get_ndarray_mut().as_mut_ptr().add(per_sample_size * system_start)
                 };
 
                 let values = UnsafeArrayViewMut {
@@ -242,7 +242,7 @@ pub fn split_tensor_map_by_system(descriptor: &mut TensorMap, n_systems: usize) 
                     let data_ptr = unsafe {
                         // SAFETY: same as the values above, this is creating
                         // multiple non-overlapping regions in memory
-                        gradient.values.to_ndarray_mut().as_mut_ptr().add(per_sample_size * system_start_grad)
+                        gradient.values.get_ndarray_mut().as_mut_ptr().add(per_sample_size * system_start_grad)
                     };
 
                     let values = UnsafeArrayViewMut {

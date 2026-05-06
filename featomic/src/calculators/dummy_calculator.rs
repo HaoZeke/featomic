@@ -54,7 +54,7 @@ impl CalculatorBase for DummyCalculator {
     fn samples(&self, keys: &Labels, systems: &mut [Box<dyn System>]) -> Result<Vec<Labels>, Error> {
         assert_eq!(keys.names(), ["center_type"]);
         let mut samples = Vec::new();
-        for [center_type] in keys.iter_fixed_size() {
+        for [center_type] in keys.to_cpu().iter_fixed_size() {
             let builder = AtomCenteredSamples {
                 cutoff: self.cutoff,
                 center_type: AtomicTypeFilter::Single(*center_type),
@@ -78,7 +78,7 @@ impl CalculatorBase for DummyCalculator {
     fn positions_gradient_samples(&self, keys: &Labels, samples: &[Labels], systems: &mut [Box<dyn System>]) -> Result<Vec<Labels>, Error> {
         debug_assert_eq!(keys.count(), samples.len());
         let mut gradient_samples = Vec::new();
-        for ([center_type], samples) in keys.iter_fixed_size().zip(samples) {
+        for ([center_type], samples) in keys.to_cpu().iter_fixed_size().zip(samples) {
             let builder = AtomCenteredSamples{
                 cutoff: self.cutoff,
                 center_type: AtomicTypeFilter::Single(*center_type),
@@ -121,9 +121,9 @@ impl CalculatorBase for DummyCalculator {
             let center_type = key[0];
 
             let block_data = block.data_mut();
-            let array = block_data.values.to_ndarray_mut();
+            let array = block_data.values.get_ndarray_mut();
 
-            for (sample_i, [system, atom]) in block_data.samples.iter_fixed_size().enumerate() {
+            for (sample_i, [system, atom]) in block_data.samples.to_cpu().iter_fixed_size().enumerate() {
                 let system_i = *system as usize;
                 let atom_i = *atom as usize;
 
@@ -198,7 +198,7 @@ impl CalculatorBase for DummyCalculator {
 
             if let Some(mut gradient) = block.gradient_mut("positions") {
                 let gradient = gradient.data_mut();
-                let array = gradient.values.to_ndarray_mut();
+                let array = gradient.values.get_ndarray_mut();
 
                 for gradient_sample_i in 0..array.shape()[0] {
                     for (property_i, property) in gradient.properties.iter().enumerate() {

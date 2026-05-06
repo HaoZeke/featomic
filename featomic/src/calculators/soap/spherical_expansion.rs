@@ -65,10 +65,10 @@ impl SphericalExpansion {
             }
 
             let block = block.data_mut();
-            let array = block.values.to_ndarray_mut();
+            let array = block.values.get_ndarray_mut();
 
             // Add the center contribution to relevant elements of array.
-            for (sample_i, &[system_i, atom_i]) in block.samples.iter_fixed_size().enumerate() {
+            for (sample_i, &[system_i, atom_i]) in block.samples.to_cpu().iter_fixed_size().enumerate() {
                 // it is possible that the samples from values.samples are not
                 // part of the systems (the user requested extra samples). In
                 // that case, we need to skip anything that does not exist, or
@@ -86,7 +86,7 @@ impl SphericalExpansion {
                     continue;
                 }
 
-                for (property_i, &[n]) in block.properties.iter_fixed_size().enumerate() {
+                for (property_i, &[n]) in block.properties.to_cpu().iter_fixed_size().enumerate() {
                     array[[sample_i, 0, property_i]] += self_contribution[n as usize];
                 }
             }
@@ -395,7 +395,7 @@ impl SphericalExpansion {
         let mut array = array_mut_for_system(block.values);
         let values = result.values.get(&o3_lambda).expect("missing o3_lambda");
 
-        for (sample_i, [_, atom_i]) in block.samples.iter_fixed_size().enumerate() {
+        for (sample_i, [_, atom_i]) in block.samples.to_cpu().iter_fixed_size().enumerate() {
             // samples might contain entries for atoms that should not be part
             // of this block, these entries can be manually requested by users.
             if *atom_i as usize >= system_size || types[*atom_i as usize] != center_type {
@@ -404,7 +404,7 @@ impl SphericalExpansion {
             let mapped_center = result.center_mapping[*atom_i as usize].expect("this atom should be part of the mapping");
 
             for m in 0..(2 * o3_lambda + 1) {
-                for (property_i, [n]) in block.properties.iter_fixed_size().enumerate() {
+                for (property_i, [n]) in block.properties.to_cpu().iter_fixed_size().enumerate() {
                     // SAFETY: we are doing in-bounds access, and removing the
                     // bounds checks is a significant speed-up for this code.
                     // There is also a bounds check when running tests in debug
@@ -475,7 +475,7 @@ impl SphericalExpansion {
         let gradient = gradient.data_mut();
         let mut array = array_mut_for_system(gradient.values);
 
-        for (grad_sample_i, &[sample_i, _, neighbor_i]) in gradient.samples.iter_fixed_size().enumerate() {
+        for (grad_sample_i, &[sample_i, _, neighbor_i]) in gradient.samples.to_cpu().iter_fixed_size().enumerate() {
             let center_i = values_samples[sample_i as usize][1] as usize;
             let neighbor_i = neighbor_i as usize;
 
@@ -491,7 +491,7 @@ impl SphericalExpansion {
 
                 for xyz in 0..3 {
                     for m in 0..(2 * o3_lambda + 1) {
-                        for (property_i, [n]) in gradient.properties.iter_fixed_size().enumerate() {
+                        for (property_i, [n]) in gradient.properties.to_cpu().iter_fixed_size().enumerate() {
                             // SAFETY: same as above
                             unsafe {
                                 let out = array.uget_mut([grad_sample_i, xyz, m, property_i]);
@@ -518,7 +518,7 @@ impl SphericalExpansion {
 
                     for xyz in 0..3 {
                         for m in 0..(2 * o3_lambda + 1) {
-                            for (property_i, [n]) in gradient.properties.iter_fixed_size().enumerate() {
+                            for (property_i, [n]) in gradient.properties.to_cpu().iter_fixed_size().enumerate() {
                                 // SAFETY: same as above
                                 unsafe {
                                     let out = array.uget_mut([grad_sample_i, xyz, m, property_i]);
@@ -584,7 +584,7 @@ impl SphericalExpansion {
         let gradient = gradient.data_mut();
         let mut array = array_mut_for_system(gradient.values);
 
-        for (grad_sample_i, [sample_i]) in gradient.samples.iter_fixed_size().enumerate() {
+        for (grad_sample_i, [sample_i]) in gradient.samples.to_cpu().iter_fixed_size().enumerate() {
             let atom_i = values_samples[*sample_i as usize][1];
 
             if atom_i as usize >= system_size || types[atom_i as usize] != center_type {
@@ -598,7 +598,7 @@ impl SphericalExpansion {
             for xyz_1 in 0..3 {
                 for xyz_2 in 0..3 {
                     for m in 0..(2 * o3_lambda + 1) {
-                        for (property_i, [n]) in gradient.properties.iter_fixed_size().enumerate() {
+                        for (property_i, [n]) in gradient.properties.to_cpu().iter_fixed_size().enumerate() {
                             // SAFETY: same as above
                             unsafe {
                                 let out = array.uget_mut([grad_sample_i, xyz_1, xyz_2, m, property_i]);
@@ -687,7 +687,7 @@ impl CalculatorBase for SphericalExpansion {
         let keys = builder.keys(systems)?;
 
         let mut builder = LabelsBuilder::new(vec!["o3_lambda", "o3_sigma", "center_type", "neighbor_type"]);
-        for &[center_type, neighbor_type] in keys.iter_fixed_size() {
+        for &[center_type, neighbor_type] in keys.to_cpu().iter_fixed_size() {
             for o3_lambda in self.by_pair.parameters().basis.angular_channels() {
                 builder.add(&[o3_lambda as i32, 1_i32, center_type, neighbor_type]);
             }
@@ -706,7 +706,7 @@ impl CalculatorBase for SphericalExpansion {
         // only compute the samples once for each `center_type, neighbor_type`,
         // and re-use the results across `o3_lambda`.
         let mut samples_per_types = BTreeMap::new();
-        for [_, _, center_type, neighbor_type] in keys.iter_fixed_size() {
+        for [_, _, center_type, neighbor_type] in keys.to_cpu().iter_fixed_size() {
             if samples_per_types.contains_key(&(*center_type, *neighbor_type)) {
                 continue;
             }
@@ -722,7 +722,7 @@ impl CalculatorBase for SphericalExpansion {
         }
 
         let mut result = Vec::new();
-        for [_, _, center_type, neighbor_type] in keys.iter_fixed_size() {
+        for [_, _, center_type, neighbor_type] in keys.to_cpu().iter_fixed_size() {
             let samples = samples_per_types.get(
                 &(*center_type, *neighbor_type)
             ).expect("missing samples");
@@ -745,7 +745,7 @@ impl CalculatorBase for SphericalExpansion {
         assert_eq!(keys.count(), samples.len());
 
         let mut gradient_samples = Vec::new();
-        for ([_, _, center_type, neighbor_type], samples) in keys.iter_fixed_size().zip(samples) {
+        for ([_, _, center_type, neighbor_type], samples) in keys.to_cpu().iter_fixed_size().zip(samples) {
             // TODO: we don't need to rebuild the gradient samples for different
             // o3_lambda
             let builder = AtomCenteredSamples {
@@ -767,7 +767,7 @@ impl CalculatorBase for SphericalExpansion {
         // only compute the components once for each `o3_lambda`,
         // and re-use the results across `center_type, neighbor_type`.
         let mut component_by_l = BTreeMap::new();
-        for [o3_lambda, _, _, _] in keys.iter_fixed_size() {
+        for [o3_lambda, _, _, _] in keys.to_cpu().iter_fixed_size() {
             if component_by_l.contains_key(o3_lambda) {
                 continue;
             }
@@ -782,7 +782,7 @@ impl CalculatorBase for SphericalExpansion {
         }
 
         let mut result = Vec::new();
-        for [o3_lambda, _, _, _] in keys.iter_fixed_size() {
+        for [o3_lambda, _, _, _] in keys.to_cpu().iter_fixed_size() {
             let components = component_by_l.get(o3_lambda).expect("missing samples");
             result.push(components.clone());
         }
@@ -807,7 +807,7 @@ impl CalculatorBase for SphericalExpansion {
             }
             SphericalExpansionBasis::Explicit(ref basis) => {
                 let mut result = Vec::new();
-                for [o3_lambda, _, _, _] in keys.iter_fixed_size() {
+                for [o3_lambda, _, _, _] in keys.to_cpu().iter_fixed_size() {
                     let mut properties = LabelsBuilder::new(self.property_names());
 
                     let radial = basis.by_angular.get(&(*o3_lambda as usize)).expect("missing o3_lambda");
@@ -926,7 +926,7 @@ mod tests {
         for l in 0..6 {
             for center_type in [1, -42] {
                 for neighbor_type in [1, -42] {
-                    let block_i = descriptor.keys().position(&[
+                    let block_i = descriptor.keys().position(&crate::label_values![
                         l as i32, 1_i32, center_type.into() , neighbor_type as i32
                     ]);
                     assert!(block_i.is_some());

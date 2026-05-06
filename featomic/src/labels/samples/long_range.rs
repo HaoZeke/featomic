@@ -56,7 +56,7 @@ impl SamplesBuilder for LongRangeSamplesPerAtom {
         assert_eq!(samples.names(), ["system", "atom"]);
         let mut builder = LabelsBuilder::new(vec!["sample", "system", "atom"]);
 
-        for (sample_i, [system_i, center_i]) in samples.iter_fixed_size().enumerate() {
+        for (sample_i, [system_i, center_i]) in samples.to_cpu().iter_fixed_size().enumerate() {
             let system_i = *system_i as usize;
 
             let system = &mut systems[system_i];

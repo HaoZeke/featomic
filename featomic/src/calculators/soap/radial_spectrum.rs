@@ -114,7 +114,7 @@ impl SoapRadialSpectrum {
             "neighbor_type",
         ]);
         let mut blocks = Vec::new();
-        for (&[center, neighbor], block) in descriptor.keys().iter_fixed_size().zip(descriptor.blocks()) {
+        for (&[center, neighbor], block) in descriptor.keys().to_cpu().iter_fixed_size().zip(descriptor.blocks()) {
             // o3_lambda is always 0, o3_sigma always 1
             keys_builder.add(&[(0 as i32), (1 as i32), center, neighbor]);
 
@@ -165,7 +165,7 @@ impl CalculatorBase for SoapRadialSpectrum {
     ) -> Result<Vec<Labels>, Error> {
         assert_eq!(keys.names(), ["center_type", "neighbor_type"]);
         let mut result = Vec::new();
-        for [center_type, neighbor_type] in keys.iter_fixed_size() {
+        for [center_type, neighbor_type] in keys.to_cpu().iter_fixed_size() {
             let builder = AtomCenteredSamples {
                 cutoff: self.parameters.cutoff.radius,
                 center_type: AtomicTypeFilter::Single(*center_type),
@@ -191,7 +191,7 @@ impl CalculatorBase for SoapRadialSpectrum {
         assert_eq!(keys.count(), samples.len());
 
         let mut gradient_samples = Vec::new();
-        for ([center_type, neighbor_type], samples) in keys.iter_fixed_size().zip(samples) {
+        for ([center_type, neighbor_type], samples) in keys.to_cpu().iter_fixed_size().zip(samples) {
             let builder = AtomCenteredSamples {
                 cutoff: self.parameters.cutoff.radius,
                 center_type: AtomicTypeFilter::Single(*center_type),
@@ -256,7 +256,7 @@ impl CalculatorBase for SoapRadialSpectrum {
         for ((_, mut block), (_, block_spx)) in
             descriptor.iter_mut().zip(spherical_expansion.iter())
         {
-            let array = block.values_mut().to_ndarray_mut();
+            let array = block.values_mut().get_ndarray_mut();
             let array_spx = block_spx.values().to_ndarray();
             let shape = array_spx.shape();
             // shape[1] is the m component
@@ -270,7 +270,7 @@ impl CalculatorBase for SoapRadialSpectrum {
                 let gradient_spx = block_spx.gradient("positions").expect("missing spherical expansion gradients");
                 debug_assert_eq!(gradient.samples(), gradient_spx.samples());
 
-                let array = gradient.values_mut().to_ndarray_mut();
+                let array = gradient.values_mut().get_ndarray_mut();
                 let array_spx = gradient_spx.values().to_ndarray();
                 let shape = array_spx.shape();
                 // shape[2] is the m component
@@ -286,7 +286,7 @@ impl CalculatorBase for SoapRadialSpectrum {
                 let gradient_spx = block_spx.gradient("cell").expect("missing spherical expansion gradients");
                 debug_assert_eq!(gradient.samples(), gradient_spx.samples());
 
-                let array = gradient.values_mut().to_ndarray_mut();
+                let array = gradient.values_mut().get_ndarray_mut();
                 let array_spx = gradient_spx.values().to_ndarray();
                 let shape = array_spx.shape();
                 // shape[2] is the m component
@@ -302,7 +302,7 @@ impl CalculatorBase for SoapRadialSpectrum {
                 let gradient_spx = block_spx.gradient("strain").expect("missing spherical expansion gradients");
                 debug_assert_eq!(gradient.samples(), gradient_spx.samples());
 
-                let array = gradient.values_mut().to_ndarray_mut();
+                let array = gradient.values_mut().get_ndarray_mut();
                 let array_spx = gradient_spx.values().to_ndarray();
                 let shape = array_spx.shape();
                 // shape[2] is the m component

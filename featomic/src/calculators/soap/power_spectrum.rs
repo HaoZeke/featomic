@@ -86,8 +86,8 @@ impl SoapPowerSpectrum {
         // depending on the neighbor_type
         let mut requested_by_key = HashMap::new();
         let mut requested_o3_lambda = BTreeSet::new();
-        for (&[center, neighbor_1, neighbor_2], block) in descriptor.keys().iter_fixed_size().zip(descriptor.blocks()) {
-            for &[l, n1, n2] in block.properties().iter_fixed_size() {
+        for (&[center, neighbor_1, neighbor_2], block) in descriptor.keys().to_cpu().iter_fixed_size().zip(descriptor.blocks()) {
+            for &[l, n1, n2] in block.properties().to_cpu().iter_fixed_size() {
                 requested_o3_lambda.insert(l as usize);
 
                 let (_, properties) = requested_by_key
@@ -105,7 +105,7 @@ impl SoapPowerSpectrum {
         // make sure all the expected blocks are there, even if the power
         // spectrum does not contain e.g. l=3 at all. The corresponding blocks
         // will have an empty set of properties
-        for &[center, neighbor_1, neighbor_2] in descriptor.keys().iter_fixed_size() {
+        for &[center, neighbor_1, neighbor_2] in descriptor.keys().to_cpu().iter_fixed_size() {
             for &l in &requested_o3_lambda {
                 requested_by_key
                     .entry([l as i32, 1_i32, center, neighbor_1])
@@ -168,7 +168,7 @@ impl SoapPowerSpectrum {
         // empty blocks for the corresponding keys in the spherical expansion
         // selection
         let mut missing_keys = BTreeSet::new();
-        for &[center, neighbor_1, neighbor_2] in descriptor.keys().iter_fixed_size() {
+        for &[center, neighbor_1, neighbor_2] in descriptor.keys().to_cpu().iter_fixed_size() {
             for o3_lambda in self.parameters.basis.angular_channels() {
                 if !requested_o3_lambda.contains(&o3_lambda) {
                     missing_keys.insert([o3_lambda as i32, 1_i32, center, neighbor_1]);
@@ -244,13 +244,13 @@ impl SoapPowerSpectrum {
             // the first one.
             let first_l = block_data.properties[0][0];
 
-            let block_id_1 = spherical_expansion.keys().position(&[
+            let block_id_1 = spherical_expansion.keys().position(&crate::label_values![
                 first_l, 1_i32, center_type, neighbor_1_type
             ]).expect("missing block in spherical expansion");
             let spx_block_1 = &spherical_expansion.block_by_id(block_id_1);
             let spx_samples_1 = spx_block_1.samples();
 
-            let block_id_2 = spherical_expansion.keys().position(&[
+            let block_id_2 = spherical_expansion.keys().position(&crate::label_values![
                 first_l, 1_i32, center_type, neighbor_2_type
             ]).expect("missing block in spherical expansion");
             let spx_block_2 = &spherical_expansion.block_by_id(block_id_2);
@@ -274,7 +274,7 @@ impl SoapPowerSpectrum {
                 let spx_gradient_1_samples = spx_gradient_1.samples();
                 let spx_gradient_2_samples = spx_gradient_2.samples();
 
-                for &[sample, system, atom] in gradient_samples.iter_fixed_size() {
+                for &[sample, system, atom] in gradient_samples.to_cpu().iter_fixed_size() {
                     // The "sample" dimension in the power spectrum gradient
                     // samples do not necessarily matches the "sample" dimension
                     // in the spherical expansion gradient samples. We use the
@@ -334,8 +334,8 @@ impl SoapPowerSpectrum {
             // both blocks should had the same number of m components
             debug_assert_eq!(block_1.values.shape()[1], block_2.values.shape()[1]);
 
-            let property_1 = block_1.properties.position(&[n1]).expect("missing n1");
-            let property_2 = block_2.properties.position(&[n2]).expect("missing n2");
+            let property_1 = block_1.properties.position(&crate::label_values![n1]).expect("missing n1");
+            let property_2 = block_2.properties.position(&crate::label_values![n2]).expect("missing n2");
 
             let o3_lambda = l as usize;
 
@@ -436,7 +436,7 @@ impl CalculatorBase for SoapPowerSpectrum {
     fn samples(&self, keys: &metatensor::Labels, systems: &mut [Box<dyn System>]) -> Result<Vec<Labels>, Error> {
         assert_eq!(keys.names(), ["center_type", "neighbor_1_type", "neighbor_2_type"]);
         let mut result = Vec::new();
-        for [center_type, neighbor_1_type, neighbor_2_type] in keys.iter_fixed_size() {
+        for [center_type, neighbor_1_type, neighbor_2_type] in keys.to_cpu().iter_fixed_size() {
 
             let builder = AtomCenteredSamples {
                 cutoff: self.parameters.cutoff.radius,
@@ -462,7 +462,7 @@ impl CalculatorBase for SoapPowerSpectrum {
         assert_eq!(keys.count(), samples.len());
 
         let mut gradient_samples = Vec::new();
-        for ([center_type, neighbor_1_type, neighbor_2_type], samples) in keys.iter_fixed_size().zip(samples) {
+        for ([center_type, neighbor_1_type, neighbor_2_type], samples) in keys.to_cpu().iter_fixed_size().zip(samples) {
             let builder = AtomCenteredSamples {
                 cutoff: self.parameters.cutoff.radius,
                 center_type: AtomicTypeFilter::Single(*center_type),
@@ -581,7 +581,7 @@ impl CalculatorBase for SoapPowerSpectrum {
 
             let mapping = samples_mapping.get(key).expect("missing sample mapping");
 
-            block_data.values.as_ndarray_mut()
+            block_data.values.get_ndarray_mut()
                 .axis_iter_mut(ndarray::Axis(0))
                 .into_par_iter()
                 .zip_eq(&mapping.values)
@@ -621,7 +621,7 @@ impl CalculatorBase for SoapPowerSpectrum {
             if let Some(mut gradient) = block.gradient_mut("positions") {
                 let gradient = gradient.data_mut();
 
-                gradient.values.to_ndarray_mut()
+                gradient.values.get_ndarray_mut()
                     .axis_iter_mut(ndarray::Axis(0))
                     .into_par_iter()
                     .zip_eq(gradient.samples.par_iter())
@@ -682,7 +682,7 @@ impl CalculatorBase for SoapPowerSpectrum {
                 if let Some(mut gradient) = block.gradient_mut(parameter) {
                     let gradient = gradient.data_mut();
 
-                    gradient.values.to_ndarray_mut()
+                    gradient.values.get_ndarray_mut()
                         .axis_iter_mut(ndarray::Axis(0))
                         .into_par_iter()
                         .zip_eq(gradient.samples.par_iter())
