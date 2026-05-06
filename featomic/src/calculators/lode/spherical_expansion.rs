@@ -432,14 +432,14 @@ impl LodeSphericalExpansion {
                 let block = block.data_mut();
                 let array = block.values.get_ndarray_mut();
 
-                let sample = [system_i as i32, center_i as i32];
+                let sample = crate::label_values![system_i, center_i];
                 let sample_i = match block.samples.position(&sample) {
                     Some(s) => s,
                     None => continue
                 };
 
                 for (property_i, [n]) in block.properties.to_cpu().iter_fixed_size().enumerate() {
-                    let n = *n as usize;
+                    let n = n.usize();
                     array[[sample_i, 0, property_i]] -= (1.0 - self.parameters.density.center_atom_weight) * central_atom_contrib[n];
                 }
             }
@@ -469,7 +469,7 @@ impl CalculatorBase for LodeSphericalExpansion {
         let mut builder = LabelsBuilder::new(vec!["o3_lambda", "o3_sigma", "center_type", "neighbor_type"]);
         for &[center_type, neighbor_type] in keys.to_cpu().iter_fixed_size() {
             for o3_lambda in self.parameters.basis.angular_channels() {
-                builder.add(&[o3_lambda as i32, 1_i32, center_type, neighbor_type]);
+                builder.add(&crate::label_values![o3_lambda, 1_i32, center_type, neighbor_type]);
             }
         }
 
@@ -492,8 +492,8 @@ impl CalculatorBase for LodeSphericalExpansion {
             }
 
             let builder = LongRangeSamplesPerAtom {
-                center_type: AtomicTypeFilter::Single(*center_type),
-                neighbor_type: AtomicTypeFilter::Single(*neighbor_type),
+                center_type: AtomicTypeFilter::Single(center_type.i32()),
+                neighbor_type: AtomicTypeFilter::Single(neighbor_type.i32()),
                 self_pairs: true,
             };
 
@@ -526,8 +526,8 @@ impl CalculatorBase for LodeSphericalExpansion {
         let mut gradient_samples = Vec::new();
         for ([_, _, center_type, neighbor_type], samples) in keys.to_cpu().iter_fixed_size().zip(samples) {
             let builder = LongRangeSamplesPerAtom {
-                center_type: AtomicTypeFilter::Single(*center_type),
-                neighbor_type: AtomicTypeFilter::Single(*neighbor_type),
+                center_type: AtomicTypeFilter::Single(center_type.i32()),
+                neighbor_type: AtomicTypeFilter::Single(neighbor_type.i32()),
                 self_pairs: true,
             };
 
@@ -549,7 +549,7 @@ impl CalculatorBase for LodeSphericalExpansion {
             }
 
             let mut component = LabelsBuilder::new(vec!["o3_mu"]);
-            for m in (-*o3_lambda)..=(*o3_lambda) {
+            for m in -o3_lambda.isize()..=o3_lambda.isize() {
                 component.add(&[m]);
             }
 
@@ -586,7 +586,7 @@ impl CalculatorBase for LodeSphericalExpansion {
                 for [o3_lambda, _, _, _] in keys.to_cpu().iter_fixed_size() {
                     let mut properties = LabelsBuilder::new(self.property_names());
 
-                    let radial = basis.by_angular.get(&(*o3_lambda as usize)).expect("missing o3_lambda");
+                    let radial = basis.by_angular.get(&o3_lambda.usize()).expect("missing o3_lambda");
                     for n in 0..radial.size() {
                         properties.add(&[n as i32]);
                     }
@@ -672,14 +672,14 @@ impl CalculatorBase for LodeSphericalExpansion {
                             let data = block.data_mut();
                             let mut array = array_mut_for_system(data.values);
 
-                            let sample = [system_i as i32, center_i as i32];
+                            let sample = crate::label_values![system_i, center_i];
                             let sample_i = match data.samples.position(&sample) {
                                 Some(s) => s,
                                 None => continue
                             };
 
                             for (_property_i, [n]) in data.properties.to_cpu().iter_fixed_size().enumerate() {
-                                let n = *n as usize;
+                                let n = n.usize();
                                 array[[sample_i, 0, _property_i]] += global_factor * k0_contrib[[n]];
                             }
                         }
@@ -698,9 +698,9 @@ impl CalculatorBase for LodeSphericalExpansion {
                         continue;
                     }
 
-                    let o3_lambda = key[0] as usize;
-                    let center_type = key[2];
-                    let neighbor_type = key[3];
+                    let o3_lambda = key[0].usize();
+                    let center_type = key[2].i32();
+                    let neighbor_type = key[3].i32();
 
                     let phase = if o3_lambda % 2 == 0 {
                         (-1.0_f64).powi(o3_lambda as i32 / 2)
@@ -721,15 +721,16 @@ impl CalculatorBase for LodeSphericalExpansion {
 
                     let data = block.data_mut();
                     let samples = &*data.samples;
+                    let samples_cpu = samples.to_cpu();
                     let properties = &*data.properties;
 
                     array_mut_for_system(data.values)
                         .axis_iter_mut(ndarray::Axis(0))
                         .into_par_iter()
                         .with_min_len(if parallel_samples {1} else {samples.count()})
-                        .zip_eq(samples.par_iter())
+                        .zip_eq(samples_cpu.par_iter())
                         .for_each(|(mut row, sample)| {
-                            let center_i = sample[1] as usize;
+                            let center_i = sample[1].usize();
 
                             if types[center_i] != center_type {
                                 // this can happen with sample selection if the
@@ -750,7 +751,7 @@ impl CalculatorBase for LodeSphericalExpansion {
 
                             for m in 0..(2 * o3_lambda + 1) {
                                 for (property_i, [n]) in properties.to_cpu().iter_fixed_size().enumerate() {
-                                    let n = *n as usize;
+                                    let n = n.usize();
 
                                     let mut value = 0.0;
                                     for ik in 0..k_vectors.len() {
@@ -771,18 +772,19 @@ impl CalculatorBase for LodeSphericalExpansion {
                     if let Some(mut gradient) = block.gradient_mut("positions") {
                         let gradient = gradient.data_mut();
                         let gradient_samples = &*gradient.samples;
+                        let gradient_samples_cpu = gradient_samples.to_cpu();
 
                         array_mut_for_system(gradient.values)
                             .axis_iter_mut(ndarray::Axis(0))
                             .into_par_iter()
                             .with_min_len(if parallel_samples {1} else {gradient_samples.count()})
-                            .zip_eq(gradient_samples.par_iter())
+                            .zip_eq(gradient_samples_cpu.par_iter())
                             .for_each(|(mut grad_row, grad_sample)| {
-                                let sample_i = grad_sample[0] as usize;
-                                let neighbor_i = grad_sample[2] as usize;
+                                let sample_i = grad_sample[0].usize();
+                                let neighbor_i = grad_sample[2].usize();
 
-                                let sample = &samples[sample_i];
-                                let center_i = sample[1] as usize;
+                                let sample = &samples_cpu[sample_i];
+                                let center_i = sample[1].usize();
 
                                 if center_i != neighbor_i {
                                     assert!(types[neighbor_i] == neighbor_type);
@@ -847,7 +849,7 @@ impl CalculatorBase for LodeSphericalExpansion {
 
                                 for m in 0..(2 * o3_lambda + 1) {
                                     for (property_i, [n]) in properties.to_cpu().iter_fixed_size().enumerate() {
-                                        let n = *n as usize;
+                                        let n = n.usize();
 
                                         let mut grad = Vector3D::zero();
                                         for (ik, k_vector) in k_vectors.iter().enumerate() {

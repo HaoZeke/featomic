@@ -64,8 +64,8 @@ impl CalculatorBase for SortedDistances {
             for [center_type, neighbor_type] in keys.to_cpu().iter_fixed_size() {
                 let builder = AtomCenteredSamples {
                     cutoff: self.cutoff,
-                    center_type: AtomicTypeFilter::Single(*center_type),
-                    neighbor_type: AtomicTypeFilter::Single(*neighbor_type),
+                    center_type: AtomicTypeFilter::Single(center_type.i32()),
+                    neighbor_type: AtomicTypeFilter::Single(neighbor_type.i32()),
                     self_pairs: false,
                 };
 
@@ -76,7 +76,7 @@ impl CalculatorBase for SortedDistances {
             for [center_type] in keys.to_cpu().iter_fixed_size() {
                 let builder = AtomCenteredSamples {
                     cutoff: self.cutoff,
-                    center_type: AtomicTypeFilter::Single(*center_type),
+                    center_type: AtomicTypeFilter::Single(center_type.i32()),
                     neighbor_type: AtomicTypeFilter::Any,
                     self_pairs: false,
                 };
@@ -133,9 +133,9 @@ impl CalculatorBase for SortedDistances {
             let array = block_data.values.get_ndarray_mut();
 
             for (sample_i, [system_i, center_i]) in block_data.samples.to_cpu().iter_fixed_size().enumerate() {
-                let center_i = *center_i as usize;
+                let center_i = center_i.usize();
 
-                let system = &mut systems[*system_i as usize];
+                let system = &mut systems[system_i.usize()];
                 system.compute_neighbors(self.cutoff)?;
                 let types = system.types()?;
 
@@ -149,7 +149,7 @@ impl CalculatorBase for SortedDistances {
                             pair.first
                         };
 
-                        if types[neighbor_i] == neighbor_type {
+                        if types[neighbor_i] == neighbor_type.i32() {
                             distances.push(pair.distance);
                         }
                     } else {
@@ -163,7 +163,7 @@ impl CalculatorBase for SortedDistances {
                 distances.resize(self.max_neighbors, self.cutoff);
 
                 for (property_i, [neighbor]) in block_data.properties.to_cpu().iter_fixed_size().enumerate() {
-                    array[[sample_i, property_i]] = distances[*neighbor as usize];
+                    array[[sample_i, property_i]] = distances[neighbor.usize()];
                 }
             }
         }

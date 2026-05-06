@@ -119,8 +119,8 @@ impl CalculatorBase for NeighborList {
                 if first == second && cell_a == 0 && cell_b == 0 && cell_c == 0 {
                     continue;
                 }
-                builder.add(&[sample_i as i32, system_i, first]);
-                builder.add(&[sample_i as i32, system_i, second]);
+                builder.add(&crate::label_values![sample_i, system_i, first]);
+                builder.add(&crate::label_values![sample_i, system_i, second]);
             }
 
             results.push(builder.finish_assume_unique());
@@ -303,7 +303,7 @@ impl HalfNeighborList {
                 };
 
                 let block_i = descriptor.keys().position(&crate::label_values![
-                    type_i.into(), type_j.into()
+                    type_i, type_j
                 ]);
 
                 if let Some(block_i) = block_i {
@@ -504,11 +504,11 @@ impl FullNeighborList {
                 }
 
                 let first_block_i = descriptor.keys().position(&crate::label_values![
-                    types[pair.first].into(), types[pair.second].into()
+                    types[pair.first], types[pair.second]
                 ]);
 
                 let second_block_i = descriptor.keys().position(&crate::label_values![
-                    types[pair.second].into(), types[pair.first].into()
+                    types[pair.second], types[pair.first]
                 ]);
 
                 let cell_a = pair.cell_shift_indices[0];

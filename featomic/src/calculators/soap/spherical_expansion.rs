@@ -73,21 +73,21 @@ impl SphericalExpansion {
                 // part of the systems (the user requested extra samples). In
                 // that case, we need to skip anything that does not exist, or
                 // with a different atomic type for the center
-                if system_i as usize >= systems.len() {
+                if system_i.usize() >= systems.len() {
                     continue;
                 }
 
-                let system = &systems[system_i as usize];
-                if atom_i as usize > system.size()? {
+                let system = &systems[system_i.usize()];
+                if atom_i.usize() > system.size()? {
                     continue;
                 }
 
-                if system.types()?[atom_i as usize] != center_type {
+                if system.types()?[atom_i.usize()] != center_type.i32() {
                     continue;
                 }
 
                 for (property_i, &[n]) in block.properties.to_cpu().iter_fixed_size().enumerate() {
-                    array[[sample_i, 0, property_i]] += self_contribution[n as usize];
+                    array[[sample_i, 0, property_i]] += self_contribution[n.usize()];
                 }
             }
         }
@@ -380,9 +380,9 @@ impl SphericalExpansion {
         let types = system.types()?;
         let system_size = system.size()?;
 
-        let o3_lambda = key[0] as usize;
-        let center_type = key[2];
-        let neighbor_type = key[3];
+        let o3_lambda = key[0].usize();
+        let center_type = key[2].i32();
+        let neighbor_type = key[3].i32();
 
         let neighbor_type_i = if let Some(s) = result.types_mapping.get(&neighbor_type) {
             *s
@@ -398,10 +398,10 @@ impl SphericalExpansion {
         for (sample_i, [_, atom_i]) in block.samples.to_cpu().iter_fixed_size().enumerate() {
             // samples might contain entries for atoms that should not be part
             // of this block, these entries can be manually requested by users.
-            if *atom_i as usize >= system_size || types[*atom_i as usize] != center_type {
+            if atom_i.usize() >= system_size || types[atom_i.usize()] != center_type {
                 continue;
             }
-            let mapped_center = result.center_mapping[*atom_i as usize].expect("this atom should be part of the mapping");
+            let mapped_center = result.center_mapping[atom_i.usize()].expect("this atom should be part of the mapping");
 
             for m in 0..(2 * o3_lambda + 1) {
                 for (property_i, [n]) in block.properties.to_cpu().iter_fixed_size().enumerate() {
@@ -411,7 +411,7 @@ impl SphericalExpansion {
                     // mode.
                     unsafe {
                         let out = array.uget_mut([sample_i, m, property_i]);
-                        *out += *values.uget([neighbor_type_i, mapped_center, m, *n as usize]);
+                        *out += *values.uget([neighbor_type_i, mapped_center, m, n.usize()]);
                     }
                 }
             }
@@ -448,9 +448,9 @@ impl SphericalExpansion {
         };
         let self_positions_gradients = result.self_positions_gradients.as_ref().expect("missing self gradients");
 
-        let o3_lambda = key[0] as usize;
-        let center_type = key[2];
-        let neighbor_type = key[3];
+        let o3_lambda = key[0].usize();
+        let center_type = key[2].i32();
+        let neighbor_type = key[3].i32();
         let neighbor_type_i = if let Some(s) = result.types_mapping.get(&neighbor_type) {
             *s
         } else {
@@ -469,15 +469,16 @@ impl SphericalExpansion {
 
         let m_1_pow_l = self.m_1_pow_l[o3_lambda];
 
-        let values_samples = block.samples();
+        let values_samples_labels = block.samples();
+        let values_samples = values_samples_labels.to_cpu();
 
         let mut gradient = block.gradient_mut("positions").expect("missing positions gradients");
         let gradient = gradient.data_mut();
         let mut array = array_mut_for_system(gradient.values);
 
         for (grad_sample_i, &[sample_i, _, neighbor_i]) in gradient.samples.to_cpu().iter_fixed_size().enumerate() {
-            let center_i = values_samples[sample_i as usize][1] as usize;
-            let neighbor_i = neighbor_i as usize;
+            let center_i = values_samples[sample_i.usize()][1].usize();
+            let neighbor_i = neighbor_i.usize();
 
             // gradient samples should NOT contain entries for atoms that should
             // not be part of this block, since they are not manually specified
@@ -496,7 +497,7 @@ impl SphericalExpansion {
                             unsafe {
                                 let out = array.uget_mut([grad_sample_i, xyz, m, property_i]);
                                 *out = *self_positions_gradients.uget(
-                                    [neighbor_type_i, mapped_center, xyz, m, *n as usize]
+                                    [neighbor_type_i, mapped_center, xyz, m, n.usize()]
                                 );
                             }
                         }
@@ -522,7 +523,7 @@ impl SphericalExpansion {
                                 // SAFETY: same as above
                                 unsafe {
                                     let out = array.uget_mut([grad_sample_i, xyz, m, property_i]);
-                                    *out += factor * *positions_gradients.uget([pair_indices.position_grad_id, xyz, m, *n as usize]);
+                                    *out += factor * *positions_gradients.uget([pair_indices.position_grad_id, xyz, m, n.usize()]);
                                 }
                             }
                         }
@@ -566,9 +567,9 @@ impl SphericalExpansion {
         let types = system.types()?;
         let system_size = system.size()?;
 
-        let o3_lambda = key[0] as usize;
-        let center_type = key[2];
-        let neighbor_type = key[3];
+        let o3_lambda = key[0].usize();
+        let center_type = key[2].i32();
+        let neighbor_type = key[3].i32();
 
         let gradients = gradients.get(&o3_lambda).expect("missing o3_lambda");
 
@@ -579,21 +580,22 @@ impl SphericalExpansion {
             return Ok(());
         };
 
-        let values_samples = block.samples();
+        let values_samples_labels = block.samples();
+        let values_samples = values_samples_labels.to_cpu();
         let mut gradient = block.gradient_mut(parameter).expect("missing gradients");
         let gradient = gradient.data_mut();
         let mut array = array_mut_for_system(gradient.values);
 
         for (grad_sample_i, [sample_i]) in gradient.samples.to_cpu().iter_fixed_size().enumerate() {
-            let atom_i = values_samples[*sample_i as usize][1];
+            let atom_i = values_samples[sample_i.usize()][1];
 
-            if atom_i as usize >= system_size || types[atom_i as usize] != center_type {
+            if atom_i.usize() >= system_size || types[atom_i.usize()] != center_type {
                 // the atom sample can be given by the user through sample
                 // selection and not match an actual atom
                 continue;
             }
 
-            let mapped_center = result.center_mapping[atom_i as usize].expect("this atom should be part of the mapping");
+            let mapped_center = result.center_mapping[atom_i.usize()].expect("this atom should be part of the mapping");
 
             for xyz_1 in 0..3 {
                 for xyz_2 in 0..3 {
@@ -602,7 +604,7 @@ impl SphericalExpansion {
                             // SAFETY: same as above
                             unsafe {
                                 let out = array.uget_mut([grad_sample_i, xyz_1, xyz_2, m, property_i]);
-                                *out += *gradients.uget([neighbor_type_i, mapped_center, xyz_1, xyz_2, m, *n as usize]);
+                                *out += *gradients.uget([neighbor_type_i, mapped_center, xyz_1, xyz_2, m, n.usize()]);
                             }
                         }
                     }
@@ -689,7 +691,7 @@ impl CalculatorBase for SphericalExpansion {
         let mut builder = LabelsBuilder::new(vec!["o3_lambda", "o3_sigma", "center_type", "neighbor_type"]);
         for &[center_type, neighbor_type] in keys.to_cpu().iter_fixed_size() {
             for o3_lambda in self.by_pair.parameters().basis.angular_channels() {
-                builder.add(&[o3_lambda as i32, 1_i32, center_type, neighbor_type]);
+                builder.add(&crate::label_values![o3_lambda, 1_i32, center_type, neighbor_type]);
             }
         }
 
@@ -713,8 +715,8 @@ impl CalculatorBase for SphericalExpansion {
 
             let builder = AtomCenteredSamples {
                 cutoff: self.by_pair.parameters().cutoff.radius,
-                center_type: AtomicTypeFilter::Single(*center_type),
-                neighbor_type: AtomicTypeFilter::Single(*neighbor_type),
+                center_type: AtomicTypeFilter::Single(center_type.i32()),
+                neighbor_type: AtomicTypeFilter::Single(neighbor_type.i32()),
                 self_pairs: true,
             };
 
@@ -750,8 +752,8 @@ impl CalculatorBase for SphericalExpansion {
             // o3_lambda
             let builder = AtomCenteredSamples {
                 cutoff: self.by_pair.parameters().cutoff.radius,
-                center_type: AtomicTypeFilter::Single(*center_type),
-                neighbor_type: AtomicTypeFilter::Single(*neighbor_type),
+                center_type: AtomicTypeFilter::Single(center_type.i32()),
+                neighbor_type: AtomicTypeFilter::Single(neighbor_type.i32()),
                 self_pairs: true,
             };
 
@@ -773,7 +775,7 @@ impl CalculatorBase for SphericalExpansion {
             }
 
             let mut component = LabelsBuilder::new(vec!["o3_mu"]);
-            for m in (-*o3_lambda)..=(*o3_lambda) {
+            for m in -o3_lambda.isize()..=o3_lambda.isize() {
                 component.add(&[m]);
             }
 
@@ -810,7 +812,7 @@ impl CalculatorBase for SphericalExpansion {
                 for [o3_lambda, _, _, _] in keys.to_cpu().iter_fixed_size() {
                     let mut properties = LabelsBuilder::new(self.property_names());
 
-                    let radial = basis.by_angular.get(&(*o3_lambda as usize)).expect("missing o3_lambda");
+                    let radial = basis.by_angular.get(&o3_lambda.usize()).expect("missing o3_lambda");
                     for n in 0..radial.size() {
                         properties.add(&[n as i32]);
                     }
@@ -844,7 +846,8 @@ impl CalculatorBase for SphericalExpansion {
                 // we will only run the calculation on pairs where one of the
                 // atom is part of the requested samples
                 let requested_centers = descriptor.iter().flat_map(|(_, block)| {
-                    block.samples().iter().map(|sample| sample[1] as usize).collect::<Vec<_>>()
+                    let samples = block.samples();
+                    samples.to_cpu().iter().map(|sample| sample[1].usize()).collect::<Vec<_>>()
                 }).collect::<BTreeSet<_>>();
 
                 let accumulated = self.accumulate_all_pairs(

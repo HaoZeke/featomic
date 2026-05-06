@@ -57,7 +57,7 @@ impl CalculatorBase for DummyCalculator {
         for [center_type] in keys.to_cpu().iter_fixed_size() {
             let builder = AtomCenteredSamples {
                 cutoff: self.cutoff,
-                center_type: AtomicTypeFilter::Single(*center_type),
+                center_type: AtomicTypeFilter::Single(center_type.i32()),
                 neighbor_type: AtomicTypeFilter::Any,
                 self_pairs: false,
             };
@@ -81,7 +81,7 @@ impl CalculatorBase for DummyCalculator {
         for ([center_type], samples) in keys.to_cpu().iter_fixed_size().zip(samples) {
             let builder = AtomCenteredSamples{
                 cutoff: self.cutoff,
-                center_type: AtomicTypeFilter::Single(*center_type),
+                center_type: AtomicTypeFilter::Single(center_type.i32()),
                 neighbor_type: AtomicTypeFilter::Any,
                 self_pairs: false,
             };
@@ -124,12 +124,12 @@ impl CalculatorBase for DummyCalculator {
             let array = block_data.values.get_ndarray_mut();
 
             for (sample_i, [system, atom]) in block_data.samples.to_cpu().iter_fixed_size().enumerate() {
-                let system_i = *system as usize;
-                let atom_i = *atom as usize;
+                let system_i = system.usize();
+                let atom_i = atom.usize();
 
                 debug_assert_eq!(systems[system_i].types()?[atom_i], center_type);
 
-                for (property_i, property) in block_data.properties.iter().enumerate() {
+                for (property_i, property) in block_data.properties.to_cpu().iter().enumerate() {
                     if property[0] == 1 {
                         array[[sample_i, property_i]] = atom_i as f64 + self.delta as f64;
                     } else if property[1] == 1 {
@@ -201,7 +201,7 @@ impl CalculatorBase for DummyCalculator {
                 let array = gradient.values.get_ndarray_mut();
 
                 for gradient_sample_i in 0..array.shape()[0] {
-                    for (property_i, property) in gradient.properties.iter().enumerate() {
+                    for (property_i, property) in gradient.properties.to_cpu().iter().enumerate() {
                         if property[0] == 1 {
                             array[[gradient_sample_i, 0, property_i]] = 0.0;
                             array[[gradient_sample_i, 1, property_i]] = 0.0;

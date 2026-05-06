@@ -4,7 +4,7 @@ use rayon::prelude::*;
 
 use ndarray::ArrayViewMutD;
 
-use metatensor::{TensorMap, TensorBlock};
+use metatensor::{LabelValue, TensorMap, TensorBlock};
 use metatensor::LabelsBuilder;
 
 
@@ -145,16 +145,16 @@ pub fn split_tensor_map_by_system(descriptor: &mut TensorMap, n_systems: usize) 
 
                 let system_start = *system_end;
                 for (sample_i, &[system, atom]) in block_data.samples.to_cpu().iter_fixed_size().enumerate().skip(system_start) {
-                    system_per_sample[sample_i] = system;
+                    system_per_sample[sample_i] = system.i32();
 
-                    if system as usize == system_i {
+                    if system.usize() == system_i {
                         // this sample is part of to the current system
                         samples.add(&[system, atom]);
                         let new_sample = samples_mapping.len();
                         samples_mapping.insert(sample_i, new_sample);
 
                         *system_end += 1;
-                    } else if system as usize > system_i {
+                    } else if system.usize() > system_i {
                         // found the next system
                         break;
                     } else {
@@ -182,7 +182,7 @@ pub fn split_tensor_map_by_system(descriptor: &mut TensorMap, n_systems: usize) 
                     //
                     // `per_sample_size * system_start` skips all the data
                     // associated with the previous systems.
-                    block_data.values.get_ndarray_mut().as_mut_ptr().add(per_sample_size * system_start)
+                    block_data.values.get_ndarray_mut::<f64>().as_mut_ptr().add(per_sample_size * system_start)
                 };
 
                 let values = UnsafeArrayViewMut {
@@ -208,13 +208,14 @@ pub fn split_tensor_map_by_system(descriptor: &mut TensorMap, n_systems: usize) 
                     let system_start_grad = *system_end_grad;
 
                     let mut samples = LabelsBuilder::new(gradient.samples.names());
-                    for gradient_sample in gradient.samples.iter().skip(system_start_grad) {
-                        let sample_i = gradient_sample[0] as usize;
+                    let gradient_samples = gradient.samples.to_cpu();
+                    for gradient_sample in gradient_samples.iter().skip(system_start_grad) {
+                        let sample_i = gradient_sample[0].usize();
                         let system = system_per_sample[sample_i];
                         if system as usize == system_i {
                             // this sample is part of to the current system
                             let mut new_gradient_sample = gradient_sample.to_vec();
-                            new_gradient_sample[0] = samples_mapping[&sample_i] as i32;
+                            new_gradient_sample[0] = LabelValue::from(samples_mapping[&sample_i]);
                             samples.add(&new_gradient_sample);
 
                             *system_end_grad += 1;
@@ -242,7 +243,7 @@ pub fn split_tensor_map_by_system(descriptor: &mut TensorMap, n_systems: usize) 
                     let data_ptr = unsafe {
                         // SAFETY: same as the values above, this is creating
                         // multiple non-overlapping regions in memory
-                        gradient.values.get_ndarray_mut().as_mut_ptr().add(per_sample_size * system_start_grad)
+                        gradient.values.get_ndarray_mut::<f64>().as_mut_ptr().add(per_sample_size * system_start_grad)
                     };
 
                     let values = UnsafeArrayViewMut {

@@ -116,7 +116,7 @@ impl SoapRadialSpectrum {
         let mut blocks = Vec::new();
         for (&[center, neighbor], block) in descriptor.keys().to_cpu().iter_fixed_size().zip(descriptor.blocks()) {
             // o3_lambda is always 0, o3_sigma always 1
-            keys_builder.add(&[(0 as i32), (1 as i32), center, neighbor]);
+            keys_builder.add(&crate::label_values![0_i32, 1_i32, center, neighbor]);
 
             let block = block.data();
             blocks.push(
@@ -168,8 +168,8 @@ impl CalculatorBase for SoapRadialSpectrum {
         for [center_type, neighbor_type] in keys.to_cpu().iter_fixed_size() {
             let builder = AtomCenteredSamples {
                 cutoff: self.parameters.cutoff.radius,
-                center_type: AtomicTypeFilter::Single(*center_type),
-                neighbor_type: AtomicTypeFilter::Single(*neighbor_type),
+                center_type: AtomicTypeFilter::Single(center_type.i32()),
+                neighbor_type: AtomicTypeFilter::Single(neighbor_type.i32()),
                 self_pairs: true,
             };
 
@@ -194,8 +194,8 @@ impl CalculatorBase for SoapRadialSpectrum {
         for ([center_type, neighbor_type], samples) in keys.to_cpu().iter_fixed_size().zip(samples) {
             let builder = AtomCenteredSamples {
                 cutoff: self.parameters.cutoff.radius,
-                center_type: AtomicTypeFilter::Single(*center_type),
-                neighbor_type: AtomicTypeFilter::Single(*neighbor_type),
+                center_type: AtomicTypeFilter::Single(center_type.i32()),
+                neighbor_type: AtomicTypeFilter::Single(neighbor_type.i32()),
                 self_pairs: true,
             };
 
@@ -257,7 +257,8 @@ impl CalculatorBase for SoapRadialSpectrum {
             descriptor.iter_mut().zip(spherical_expansion.iter())
         {
             let array = block.values_mut().get_ndarray_mut();
-            let array_spx = block_spx.values().to_ndarray();
+            let array_spx_lock = block_spx.values().to_ndarray_lock::<f64>();
+            let array_spx = array_spx_lock.read().expect("array lock was poisoned");
             let shape = array_spx.shape();
             // shape[1] is the m component
             debug_assert_eq!(shape[1], 1);
@@ -271,7 +272,8 @@ impl CalculatorBase for SoapRadialSpectrum {
                 debug_assert_eq!(gradient.samples(), gradient_spx.samples());
 
                 let array = gradient.values_mut().get_ndarray_mut();
-                let array_spx = gradient_spx.values().to_ndarray();
+                let array_spx_lock = gradient_spx.values().to_ndarray_lock::<f64>();
+                let array_spx = array_spx_lock.read().expect("array lock was poisoned");
                 let shape = array_spx.shape();
                 // shape[2] is the m component
                 debug_assert_eq!(shape[2], 1);
@@ -287,7 +289,8 @@ impl CalculatorBase for SoapRadialSpectrum {
                 debug_assert_eq!(gradient.samples(), gradient_spx.samples());
 
                 let array = gradient.values_mut().get_ndarray_mut();
-                let array_spx = gradient_spx.values().to_ndarray();
+                let array_spx_lock = gradient_spx.values().to_ndarray_lock::<f64>();
+                let array_spx = array_spx_lock.read().expect("array lock was poisoned");
                 let shape = array_spx.shape();
                 // shape[2] is the m component
                 debug_assert_eq!(shape[3], 1);
@@ -303,7 +306,8 @@ impl CalculatorBase for SoapRadialSpectrum {
                 debug_assert_eq!(gradient.samples(), gradient_spx.samples());
 
                 let array = gradient.values_mut().get_ndarray_mut();
-                let array_spx = gradient_spx.values().to_ndarray();
+                let array_spx_lock = gradient_spx.values().to_ndarray_lock::<f64>();
+                let array_spx = array_spx_lock.read().expect("array lock was poisoned");
                 let shape = array_spx.shape();
                 // shape[2] is the m component
                 debug_assert_eq!(shape[3], 1);
