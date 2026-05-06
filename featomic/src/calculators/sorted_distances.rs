@@ -130,7 +130,7 @@ impl CalculatorBase for SortedDistances {
             };
 
             let block_data = block.data_mut();
-            let array = block_data.values.get_ndarray_mut();
+            let array = block_data.values.get_ndarray_mut::<f64>();
 
             for (sample_i, [system_i, center_i]) in block_data.samples.to_cpu().iter_fixed_size().enumerate() {
                 let center_i = center_i.usize();

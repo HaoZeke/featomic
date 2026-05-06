@@ -41,12 +41,13 @@ impl metatensor::Array for UnsafeArrayViewMut {
         unimplemented!("invalid operation on UnsafeArrayViewMut");
     }
 
-    fn copy(&self) -> Box<dyn metatensor::Array> {
+    fn copy(&self, device: metatensor::data::DLDevice) -> Box<dyn metatensor::Array> {
+        assert_eq!(device, metatensor::data::DLDevice::cpu());
         unimplemented!("invalid operation on UnsafeArrayViewMut");
     }
 
-    fn shape(&self) -> &[usize] {
-        &self.shape
+    fn shape(&self) -> Vec<usize> {
+        self.shape.clone()
     }
 
     fn reshape(&mut self, _: &[usize]) {
@@ -65,20 +66,31 @@ impl metatensor::Array for UnsafeArrayViewMut {
         unimplemented!("invalid operation on UnsafeArrayViewMut");
     }
 
-    fn device(&self) -> metatensor::dlpk::sys::DLDevice {
-        metatensor::dlpk::sys::DLDevice { device_type: metatensor::dlpk::sys::DLDeviceType::kDLCPU, device_id: 0 }
+    fn device(&self) -> metatensor::data::DLDevice {
+        metatensor::data::DLDevice::cpu()
     }
 
-    fn dtype(&self) -> metatensor::dlpk::sys::DLDataType {
-        metatensor::dlpk::sys::DLDataType { code: metatensor::dlpk::sys::DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 }
+    fn dtype(&self) -> metatensor::data::DLDataType {
+        metatensor::data::DLDataType {
+            code: metatensor::data::DLDataTypeCode::kDLFloat,
+            bits: 64,
+            lanes: 1,
+        }
     }
 
     fn as_dlpack(
         &self,
-        _: metatensor::dlpk::sys::DLDevice,
+        _: metatensor::data::DLDevice,
         _: Option<i64>,
-        _: metatensor::dlpk::sys::DLPackVersion,
-    ) -> Result<metatensor::dlpk::DLPackTensor, metatensor::Error> {
+        _: metatensor::data::DLPackVersion,
+    ) -> Result<metatensor::data::DLPackTensor, metatensor::Error> {
+        unimplemented!("invalid operation on UnsafeArrayViewMut");
+    }
+
+    fn from_dlpack(
+        &self,
+        _: metatensor::data::DLPackTensor,
+    ) -> Result<Box<dyn metatensor::Array>, metatensor::Error> {
         unimplemented!("invalid operation on UnsafeArrayViewMut");
     }
 }

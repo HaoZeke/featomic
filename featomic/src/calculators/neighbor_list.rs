@@ -320,7 +320,7 @@ impl HalfNeighborList {
                     ]);
 
                     if let Some(sample_i) = sample_i {
-                        let array = block_data.values.get_ndarray_mut();
+                        let array = block_data.values.get_ndarray_mut::<f64>();
                         for (property_i, &[distance]) in block_data.properties.to_cpu().iter_fixed_size().enumerate() {
                             if distance == 0 {
                                 array[[sample_i, 0, property_i]] = pair_vector[0];
@@ -339,7 +339,7 @@ impl HalfNeighborList {
                                 sample_i as i32, system_i as i32, atom_j as i32
                             ]).expect("missing gradient sample");
 
-                            let array = gradient.values.get_ndarray_mut();
+                            let array = gradient.values.get_ndarray_mut::<f64>();
 
                             for (property_i, &[distance]) in gradient.properties.to_cpu().iter_fixed_size().enumerate() {
                                 if distance == 0 {
@@ -530,7 +530,7 @@ impl FullNeighborList {
                     ]);
 
                     if let Some(sample_i) = sample_i {
-                        let array = block_data.values.get_ndarray_mut();
+                        let array = block_data.values.get_ndarray_mut::<f64>();
 
                         for (property_i, &[distance]) in block_data.properties.to_cpu().iter_fixed_size().enumerate() {
                             if distance == 0 {
@@ -550,7 +550,7 @@ impl FullNeighborList {
                                 sample_i as i32, system_i as i32, pair.second as i32
                             ]).expect("missing gradient sample");
 
-                            let array = gradient.values.get_ndarray_mut();
+                            let array = gradient.values.get_ndarray_mut::<f64>();
 
                             for (property_i, &[distance]) in gradient.properties.to_cpu().iter_fixed_size().enumerate() {
                                 if distance == 0 {
@@ -582,7 +582,7 @@ impl FullNeighborList {
                     ]);
 
                     if let Some(sample_i) = sample_i {
-                        let array = block_data.values.get_ndarray_mut();
+                        let array = block_data.values.get_ndarray_mut::<f64>();
                         for (property_i, &[distance]) in block_data.properties.to_cpu().iter_fixed_size().enumerate() {
                             if distance == 0 {
                                 array[[sample_i, 0, property_i]] = -pair.vector[0];
@@ -601,7 +601,7 @@ impl FullNeighborList {
                                 sample_i as i32, system_i as i32, pair.first as i32
                             ]).expect("missing gradient sample");
 
-                            let array = gradient.values.get_ndarray_mut();
+                            let array = gradient.values.get_ndarray_mut::<f64>();
 
                             for (property_i, &[distance]) in gradient.properties.to_cpu().iter_fixed_size().enumerate() {
                                 if distance == 0 {

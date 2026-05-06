@@ -256,7 +256,7 @@ impl CalculatorBase for SoapRadialSpectrum {
         for ((_, mut block), (_, block_spx)) in
             descriptor.iter_mut().zip(spherical_expansion.iter())
         {
-            let array = block.values_mut().get_ndarray_mut();
+            let array = block.values_mut().get_ndarray_mut::<f64>();
             let array_spx_lock = block_spx.values().to_ndarray_lock::<f64>();
             let array_spx = array_spx_lock.read().expect("array lock was poisoned");
             let shape = array_spx.shape();
@@ -271,7 +271,7 @@ impl CalculatorBase for SoapRadialSpectrum {
                 let gradient_spx = block_spx.gradient("positions").expect("missing spherical expansion gradients");
                 debug_assert_eq!(gradient.samples(), gradient_spx.samples());
 
-                let array = gradient.values_mut().get_ndarray_mut();
+                let array = gradient.values_mut().get_ndarray_mut::<f64>();
                 let array_spx_lock = gradient_spx.values().to_ndarray_lock::<f64>();
                 let array_spx = array_spx_lock.read().expect("array lock was poisoned");
                 let shape = array_spx.shape();
@@ -288,7 +288,7 @@ impl CalculatorBase for SoapRadialSpectrum {
                 let gradient_spx = block_spx.gradient("cell").expect("missing spherical expansion gradients");
                 debug_assert_eq!(gradient.samples(), gradient_spx.samples());
 
-                let array = gradient.values_mut().get_ndarray_mut();
+                let array = gradient.values_mut().get_ndarray_mut::<f64>();
                 let array_spx_lock = gradient_spx.values().to_ndarray_lock::<f64>();
                 let array_spx = array_spx_lock.read().expect("array lock was poisoned");
                 let shape = array_spx.shape();
@@ -305,7 +305,7 @@ impl CalculatorBase for SoapRadialSpectrum {
                 let gradient_spx = block_spx.gradient("strain").expect("missing spherical expansion gradients");
                 debug_assert_eq!(gradient.samples(), gradient_spx.samples());
 
-                let array = gradient.values_mut().get_ndarray_mut();
+                let array = gradient.values_mut().get_ndarray_mut::<f64>();
                 let array_spx_lock = gradient_spx.values().to_ndarray_lock::<f64>();
                 let array_spx = array_spx_lock.read().expect("array lock was poisoned");
                 let shape = array_spx.shape();

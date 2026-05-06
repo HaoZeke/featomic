@@ -121,7 +121,7 @@ impl CalculatorBase for DummyCalculator {
             let center_type = key[0];
 
             let block_data = block.data_mut();
-            let array = block_data.values.get_ndarray_mut();
+            let array = block_data.values.get_ndarray_mut::<f64>();
 
             for (sample_i, [system, atom]) in block_data.samples.to_cpu().iter_fixed_size().enumerate() {
                 let system_i = system.usize();
@@ -198,7 +198,7 @@ impl CalculatorBase for DummyCalculator {
 
             if let Some(mut gradient) = block.gradient_mut("positions") {
                 let gradient = gradient.data_mut();
-                let array = gradient.values.get_ndarray_mut();
+                let array = gradient.values.get_ndarray_mut::<f64>();
 
                 for gradient_sample_i in 0..array.shape()[0] {
                     for (property_i, property) in gradient.properties.to_cpu().iter().enumerate() {

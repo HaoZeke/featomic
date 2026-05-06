@@ -65,7 +65,7 @@ impl SphericalExpansion {
             }
 
             let block = block.data_mut();
-            let array = block.values.get_ndarray_mut();
+            let array = block.values.get_ndarray_mut::<f64>();
 
             // Add the center contribution to relevant elements of array.
             for (sample_i, &[system_i, atom_i]) in block.samples.to_cpu().iter_fixed_size().enumerate() {

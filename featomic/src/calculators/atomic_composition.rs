@@ -119,19 +119,19 @@ impl CalculatorBase for AtomicComposition {
             let center_type = key[0];
 
             let block = block.data_mut();
-            let array = block.values.get_ndarray_mut();
+            let array = block.values.get_ndarray_mut::<f64>();
 
             for (property_i, &[count]) in block.properties.to_cpu().iter_fixed_size().enumerate() {
                 if count == 0 {
-                    for (sample_i, samples) in block.samples.iter().enumerate() {
+                    for (sample_i, samples) in block.samples.to_cpu().iter().enumerate() {
                         let mut value = 0.0;
 
                         if self.per_system {
                             // Current system is saved in the 0th index of the samples.
-                            let system_i = samples[0] as usize;
+                            let system_i = samples[0].usize();
                             let system = &systems[system_i];
                             for &atomic_type in system.types()? {
-                                if atomic_type == center_type {
+                                if atomic_type == center_type.i32() {
                                     value += 1.0;
                                 }
                             }

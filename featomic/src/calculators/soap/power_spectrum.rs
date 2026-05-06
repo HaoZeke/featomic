@@ -589,7 +589,7 @@ impl CalculatorBase for SoapPowerSpectrum {
 
             let mapping = samples_mapping.get(key).expect("missing sample mapping");
 
-            block_data.values.get_ndarray_mut()
+            block_data.values.get_ndarray_mut::<f64>()
                 .axis_iter_mut(ndarray::Axis(0))
                 .into_par_iter()
                 .zip_eq(&mapping.values)
@@ -632,7 +632,7 @@ impl CalculatorBase for SoapPowerSpectrum {
                     let gradient = gradient.data_mut();
                     let gradient_samples = gradient.samples.to_cpu();
 
-                    gradient.values.get_ndarray_mut()
+                    gradient.values.get_ndarray_mut::<f64>()
                         .axis_iter_mut(ndarray::Axis(0))
                         .into_par_iter()
                     .zip_eq(gradient_samples.par_iter())
@@ -696,7 +696,7 @@ impl CalculatorBase for SoapPowerSpectrum {
                     let gradient = gradient.data_mut();
                     let gradient_samples = gradient.samples.to_cpu();
 
-                    gradient.values.get_ndarray_mut()
+                    gradient.values.get_ndarray_mut::<f64>()
                         .axis_iter_mut(ndarray::Axis(0))
                         .into_par_iter()
                         .zip_eq(gradient_samples.par_iter())

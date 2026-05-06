@@ -430,7 +430,7 @@ impl LodeSphericalExpansion {
 
                 let mut block = descriptor.block_mut_by_id(block_i);
                 let block = block.data_mut();
-                let array = block.values.get_ndarray_mut();
+                let array = block.values.get_ndarray_mut::<f64>();
 
                 let sample = crate::label_values![system_i, center_i];
                 let sample_i = match block.samples.position(&sample) {
