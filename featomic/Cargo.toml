@@ -25,7 +25,7 @@ metatensor-static = ["metatensor/static"]
 all-features = true
 
 [dependencies]
-metatensor = {git = "https://github.com/HaoZeke/metatensor.git", branch = "labels-values-array-clean", features = ["rayon"]}
+metatensor = {git = "https://github.com/metatensor/metatensor.git", tag = "metatensor-core-v0.2.0-rc3", features = ["rayon"]}
 
 ndarray = {version = "0.17", features = ["rayon", "serde", "approx"]}
 num-traits = "0.2"
@@ -57,7 +57,7 @@ toml_writer = "=1.0.2"
 [build-dependencies]
 cbindgen = { version = "0.29", default-features = false }
 fs_extra = "1"
-metatensor = {git = "https://github.com/HaoZeke/metatensor.git", branch = "labels-values-array-clean"}
+metatensor = {git = "https://github.com/metatensor/metatensor.git", tag = "metatensor-core-v0.2.0-rc3"}
 
 # the last versions that supports Rust 1.74
 tempfile = "=3.24.0"
